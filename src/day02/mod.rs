@@ -1,47 +1,61 @@
 #[derive(Debug, Clone)]
 struct Program {
     pc: usize,
-    memory: Vec<usize>,
+    mem: Vec<usize>,
+}
+
+enum Instruction {
+    Add(usize, usize, usize),
+    Mul(usize, usize, usize),
+    Brk,
 }
 
 #[allow(dead_code)]
 impl Program {
-    fn new(memory: Vec<usize>) -> Program {
-        Program { pc: 0, memory }
+    pub fn new(mem: Vec<usize>) -> Program {
+        Program { pc: 0, mem }
     }
 
-    fn from(input: &str) -> Program {
+    pub fn memory(&self) -> &[usize] {
+        &self.mem
+    }
+
+    pub fn from(input: &str) -> Program {
         Program::new(input.split(',').filter_map(|s| s.trim().parse().ok()).collect())
     }
 
-    fn run_with_inputs(mut self, noun: usize, verb: usize) -> usize {
-        self.memory[1] = noun;
-        self.memory[2] = verb;
+    pub fn run_with_inputs(mut self, noun: usize, verb: usize) -> usize {
+        self.mem[1] = noun;
+        self.mem[2] = verb;
         self.run()
     }
 
-    fn run(mut self) -> usize {
+    pub fn run(mut self) -> usize {
         loop {
-            match self.memory[self.pc] {
-                1 => {
-                    let a = self.memory[self.pc + 1];
-                    let b = self.memory[self.pc + 2];
-                    let dest = self.memory[self.pc + 3];
-                    self.memory[dest] = self.memory[a] + self.memory[b];
+            use Instruction::*;
+            match self.next_instruction() {
+                Add(a, b, c) => {
+                    self.mem[c] = self.mem[a] + self.mem[b];
                     self.pc += 4;
                 }
-                2 => {
-                    let a = self.memory[self.pc + 1];
-                    let b = self.memory[self.pc + 2];
-                    let dest = self.memory[self.pc + 3];
-                    self.memory[dest] = self.memory[a] * self.memory[b];
+                Mul(a, b, c) => {
+                    self.mem[c] = self.mem[a] * self.mem[b];
                     self.pc += 4;
                 }
-                99 => {
-                    break self.memory[0];
+                Brk => {
+                    break self.mem[0];
                 }
-                _ => panic!("Oops, not an opcode!"),
             }
+        }
+    }
+
+    fn next_instruction(&self) -> Instruction {
+        use Instruction::*;
+        match self.mem[self.pc] {
+            1 => Add(self.mem[self.pc + 1], self.mem[self.pc + 2], self.mem[self.pc + 3]),
+            2 => Mul(self.mem[self.pc + 1], self.mem[self.pc + 2], self.mem[self.pc + 3]),
+            99 => Brk,
+            _ => panic!("Oops, not an opcode!"),
         }
     }
 }
