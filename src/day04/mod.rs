@@ -42,7 +42,8 @@ fn is_password_v2(value: u32) -> bool {
         let [prev, curr] = [digits[i - 1], digits[i]];
         if prev < curr {
             return false;
-        } else if prev == curr
+        } else if !has_adjacent_matching_digits
+            && prev == curr
             && (i == 1 || digits[i - 2] != prev)
             && (i == digits.len() - 1 || digits[i + 1] != curr)
         {
