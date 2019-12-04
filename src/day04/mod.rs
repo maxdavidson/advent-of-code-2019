@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 fn six_digits(value: u32) -> [u32; 6] {
     [
         value % 10,
@@ -17,10 +19,13 @@ fn is_password_v1(value: u32) -> bool {
 
     for i in 1..digits.len() {
         let [prev, curr] = [digits[i - 1], digits[i]];
-        if prev < curr {
-            return false;
-        } else if prev == curr {
-            has_adjacent_matching_digits = true;
+
+        match prev.cmp(&curr) {
+            Ordering::Less => return false,
+            Ordering::Equal => {
+                has_adjacent_matching_digits = true;
+            }
+            _ => {}
         }
     }
 
