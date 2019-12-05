@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-fn six_digits(value: u32) -> [u32; 6] {
+const fn six_digits(value: u32) -> [u32; 6] {
     [
         value % 10,
         (value / 10) % 10,
