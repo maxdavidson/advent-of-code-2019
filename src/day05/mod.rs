@@ -1,8 +1,9 @@
-use crate::utils::intcode::CPU;
 use num::{PrimInt, Signed};
-use std::collections::VecDeque;
+
 use std::fmt::Debug;
 use std::str::FromStr;
+
+use crate::utils::intcode::CPU;
 
 #[allow(dead_code)]
 fn diagnostic_code<T>(input: &str, system_id: T) -> T
@@ -10,28 +11,10 @@ where
     T: PrimInt + Signed + FromStr,
     <T as FromStr>::Err: Debug,
 {
-    let memory: Vec<T> = input.trim().split(',').map(|s| s.parse().unwrap()).collect();
+    let memory: Vec<_> = input.trim().split(',').map(|s| s.parse().unwrap()).collect();
+    let cpu = CPU::new(memory);
 
-    let mut output = VecDeque::new();
-
-    let mut cpu = CPU {
-        pc: 0,
-        memory: memory.into_boxed_slice(),
-        reader: || Some(system_id),
-        writer: |val| output.push_back(val),
-    };
-
-    cpu.run();
-
-    let mut it = output.into_iter().rev();
-
-    let result = it.next().expect("No output!");
-
-    if !it.all(|val| val == T::zero()) {
-        panic!("All codes must be 0!");
-    }
-
-    result
+    cpu.run(|| system_id).last().unwrap()
 }
 
 #[cfg(test)]

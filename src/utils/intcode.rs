@@ -1,4 +1,5 @@
 use num::PrimInt;
+use std::iter::from_fn;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Parameter<T: PrimInt> {
@@ -29,45 +30,24 @@ pub enum Instruction<T: PrimInt> {
     Break,
 }
 
-pub trait Input<T> {
-    fn read(&mut self) -> Option<T>;
+pub enum ExecutionResult<T, Sink: FnOnce(T)> {
+    Running,
+    YieldedOutput(T),
+    YieldedInput(Sink),
+    Completed,
 }
 
-pub trait Output<T> {
-    fn write(&mut self, value: T);
+#[derive(Debug, Clone)]
+pub struct CPU<T> {
+    pc: usize,
+    memory: Box<[T]>,
 }
 
-impl<T, F: FnMut() -> Option<T>> Input<T> for F {
-    fn read(&mut self) -> Option<T> {
-        self()
+impl<T: PrimInt> CPU<T> {
+    pub fn new(memory: impl Into<Box<[T]>>) -> CPU<T> {
+        CPU { pc: 0, memory: memory.into() }
     }
-}
 
-impl<T, F: FnMut(T)> Output<T> for F {
-    fn write(&mut self, value: T) {
-        self(value)
-    }
-}
-
-#[derive(Debug)]
-pub struct CPU<T, Reader, Writer>
-where
-    T: PrimInt,
-    Reader: Input<T>,
-    Writer: Output<T>,
-{
-    pub pc: usize,
-    pub memory: Box<[T]>,
-    pub reader: Reader,
-    pub writer: Writer,
-}
-
-impl<T, Reader, Writer> CPU<T, Reader, Writer>
-where
-    T: PrimInt,
-    Reader: Input<T>,
-    Writer: Output<T>,
-{
     fn read_param(&self, param: Parameter<T>) -> T {
         match param {
             Parameter::Immediate(value) => value,
@@ -104,66 +84,77 @@ where
         }
     }
 
-    pub fn run(&mut self) {
-        loop {
-            let instruction = self.fetch_instruction();
-
-            match instruction {
-                Instruction::Add(first, second, dest) => {
-                    let result = self.read_param(first) + self.read_param(second);
-                    self.write_param(dest, result);
-                    self.pc += 4;
-                }
-                Instruction::Multiply(first, second, dest) => {
-                    let result = self.read_param(first) * self.read_param(second);
-                    self.write_param(dest, result);
-                    self.pc += 4;
-                }
-                Instruction::Read(dest) => {
-                    let result = self.reader.read().unwrap();
-                    self.write_param(dest, result);
-                    self.pc += 2;
-                }
-                Instruction::Write(param) => {
-                    self.writer.write(self.read_param(param));
-                    self.pc += 2;
-                }
-                Instruction::JumpIfTrue(cond, param) => {
-                    if self.read_param(cond) != T::zero() {
-                        self.pc = self.read_param(param).to_usize().unwrap();
-                    } else {
-                        self.pc += 3;
-                    }
-                }
-                Instruction::JumpIfFalse(cond, param) => {
-                    if self.read_param(cond) == T::zero() {
-                        self.pc = self.read_param(param).to_usize().unwrap();
-                    } else {
-                        self.pc += 3;
-                    }
-                }
-                Instruction::LessThan(first, second, dest) => {
-                    let result = if self.read_param(first) < self.read_param(second) {
-                        T::one()
-                    } else {
-                        T::zero()
-                    };
-                    self.write_param(dest, result);
-                    self.pc += 4;
-                }
-                Instruction::Equals(first, second, dest) => {
-                    let result = if self.read_param(first) == self.read_param(second) {
-                        T::one()
-                    } else {
-                        T::zero()
-                    };
-                    self.write_param(dest, result);
-                    self.pc += 4;
-                }
-                Instruction::Break => {
-                    break;
-                }
+    pub fn execute_instruction(&mut self) -> ExecutionResult<T, impl FnOnce(T) + '_> {
+        match self.fetch_instruction() {
+            Instruction::Add(first, second, dest) => {
+                let result = self.read_param(first) + self.read_param(second);
+                self.write_param(dest, result);
+                self.pc += 4;
+                ExecutionResult::Running
             }
+            Instruction::Multiply(first, second, dest) => {
+                let result = self.read_param(first) * self.read_param(second);
+                self.write_param(dest, result);
+                self.pc += 4;
+                ExecutionResult::Running
+            }
+            Instruction::Read(dest) => ExecutionResult::YieldedInput(move |result| {
+                self.write_param(dest, result);
+                self.pc += 2;
+            }),
+            Instruction::Write(param) => {
+                self.pc += 2;
+                ExecutionResult::YieldedOutput(self.read_param(param))
+            }
+            Instruction::JumpIfTrue(cond, param) => {
+                if self.read_param(cond) != T::zero() {
+                    self.pc = self.read_param(param).to_usize().unwrap();
+                } else {
+                    self.pc += 3;
+                }
+                ExecutionResult::Running
+            }
+            Instruction::JumpIfFalse(cond, param) => {
+                if self.read_param(cond) == T::zero() {
+                    self.pc = self.read_param(param).to_usize().unwrap();
+                } else {
+                    self.pc += 3;
+                }
+                ExecutionResult::Running
+            }
+            Instruction::LessThan(first, second, dest) => {
+                let result = if self.read_param(first) < self.read_param(second) {
+                    T::one()
+                } else {
+                    T::zero()
+                };
+                self.write_param(dest, result);
+                self.pc += 4;
+                ExecutionResult::Running
+            }
+            Instruction::Equals(first, second, dest) => {
+                let result = if self.read_param(first) == self.read_param(second) {
+                    T::one()
+                } else {
+                    T::zero()
+                };
+                self.write_param(dest, result);
+                self.pc += 4;
+                ExecutionResult::Running
+            }
+            Instruction::Break => ExecutionResult::Completed,
         }
+    }
+
+    /// Returns an iterator over the outputs
+    pub fn run(mut self, mut get_input: impl FnMut() -> T) -> impl Iterator<Item = T> {
+        from_fn(move || loop {
+            match self.execute_instruction() {
+                ExecutionResult::YieldedInput(sink) => sink(get_input()),
+                ExecutionResult::YieldedOutput(value) => break Some(value),
+                ExecutionResult::Completed => break None,
+                ExecutionResult::Running => {}
+            }
+        })
     }
 }
