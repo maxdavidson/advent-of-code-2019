@@ -7,4 +7,5 @@ edition = "2018"
 [dependencies]
 num = "0.2.0"
 itertools = "0.8.2"
+bytecount = "0.6.0"
 
