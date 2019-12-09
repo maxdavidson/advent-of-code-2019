@@ -1,6 +1,6 @@
 use num::{PrimInt, Signed};
 
-use std::fmt::Debug;
+use std::fmt;
 use std::str::FromStr;
 
 use crate::utils::intcode::CPU;
@@ -8,13 +8,9 @@ use crate::utils::intcode::CPU;
 #[allow(dead_code)]
 fn diagnostic_code<T>(input: &str, system_id: T) -> T
 where
-    T: PrimInt + Signed + FromStr,
-    <T as FromStr>::Err: Debug,
+    T: PrimInt + Signed + FromStr + fmt::Display,
 {
-    let memory: Vec<_> = input.trim().split(',').map(|s| s.parse().unwrap()).collect();
-    let cpu = CPU::new(memory);
-
-    cpu.run(|| system_id).last().unwrap()
+    CPU::from_source(input).outputs_with(|| system_id).last().unwrap()
 }
 
 #[cfg(test)]

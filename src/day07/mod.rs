@@ -2,35 +2,29 @@ use itertools::Itertools;
 
 use crate::utils::intcode::{ExecutionResult, CPU};
 
-fn parse_input(input: &str) -> Vec<i32> {
-    input.trim().split(',').filter_map(|s| s.parse().ok()).collect()
+#[derive(Debug, Clone)]
+struct Amplifier {
+    cpu: CPU<i32>,
 }
 
-#[derive(Debug, Clone)]
-struct Amplifier(CPU<i32>);
-
 impl Amplifier {
-    fn new(memory: Box<[i32]>, phase: i32) -> Amplifier {
-        let mut cpu = CPU::new(memory);
-
+    fn new(mut cpu: CPU<i32>, phase: i32) -> Amplifier {
         // Run the CPU until the first input before returning
         loop {
-            match cpu.execute_instruction() {
-                ExecutionResult::YieldedInput(sink) => {
-                    sink(phase);
-                    break;
-                }
-                ExecutionResult::Running => {}
-                _ => panic!("This shouldn't happen!"),
+            let instruction = cpu.fetch_instruction().expect("No instruction found");
+            if let ExecutionResult::YieldedInput(sink) = cpu.execute_instruction(instruction) {
+                sink(phase);
+                break;
             }
         }
 
-        Amplifier(cpu)
+        Amplifier { cpu }
     }
 
     fn run(&mut self, input: i32) -> Option<i32> {
         loop {
-            match self.0.execute_instruction() {
+            let instruction = self.cpu.fetch_instruction()?;
+            match self.cpu.execute_instruction(instruction) {
                 ExecutionResult::YieldedInput(sink) => sink(input),
                 ExecutionResult::YieldedOutput(value) => break Some(value),
                 ExecutionResult::Completed => break None,
@@ -42,14 +36,14 @@ impl Amplifier {
 
 #[allow(dead_code)]
 fn find_largest_output_signal(input: &str) -> i32 {
-    let memory = parse_input(input).into_boxed_slice();
+    let cpu = CPU::from_source(input);
 
     (0..5)
         .permutations(5)
         .map(|phases| {
             phases
                 .into_iter()
-                .map(|phase| Amplifier::new(memory.clone(), phase))
+                .map(|phase| Amplifier::new(cpu.clone(), phase))
                 .fold(0, |input, mut amplifier| amplifier.run(input).unwrap())
         })
         .max()
@@ -58,13 +52,13 @@ fn find_largest_output_signal(input: &str) -> i32 {
 
 #[allow(dead_code)]
 fn find_largest_output_signal_with_feedback(input: &str) -> i32 {
-    let memory = parse_input(input).into_boxed_slice();
+    let cpu = CPU::from_source(input);
 
     (5..10)
         .permutations(5)
         .map(|phases| {
             let mut amplifiers: Vec<_> =
-                phases.into_iter().map(|phase| Amplifier::new(memory.clone(), phase)).collect();
+                phases.into_iter().map(|phase| Amplifier::new(cpu.clone(), phase)).collect();
 
             let mut current_value = 0;
 
