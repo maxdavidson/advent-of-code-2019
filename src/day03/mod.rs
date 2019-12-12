@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::str::FromStr;
 
-use crate::utils::point::Point;
+use crate::utils::Vec2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Direction {
@@ -27,21 +27,21 @@ impl TryFrom<char> for Direction {
     }
 }
 
-impl<T: Num + Signed + Copy> Point<T> {
-    fn up() -> Point<T> {
-        Point(T::zero(), T::one())
+impl<T: Num + Signed + Copy> Vec2<T> {
+    fn up() -> Vec2<T> {
+        Vec2(T::zero(), T::one())
     }
 
-    fn down() -> Point<T> {
-        Point(T::zero(), -T::one())
+    fn down() -> Vec2<T> {
+        Vec2(T::zero(), -T::one())
     }
 
-    fn left() -> Point<T> {
-        Point(-T::one(), T::zero())
+    fn left() -> Vec2<T> {
+        Vec2(-T::one(), T::zero())
     }
 
-    fn right() -> Point<T> {
-        Point(T::one(), T::zero())
+    fn right() -> Vec2<T> {
+        Vec2(T::one(), T::zero())
     }
 
     fn translate(&mut self, direction: Direction) {
@@ -61,11 +61,11 @@ fn pairs<T: FromStr>(input: &str) -> impl Iterator<Item = (Direction, T)> + '_ {
     })
 }
 
-fn visited_points(pairs: impl Iterator<Item = (Direction, i32)>) -> HashMap<Point<i32>, usize> {
+fn visited_points(pairs: impl Iterator<Item = (Direction, i32)>) -> HashMap<Vec2<i32>, usize> {
     let steps = pairs.flat_map(|(dir, len)| (0..len).map(move |_| dir));
 
     let mut visited = HashMap::new();
-    let mut current_point = Point(0, 0);
+    let mut current_point = Vec2(0, 0);
 
     for (index, dir) in steps.enumerate() {
         current_point.translate(dir);
@@ -80,13 +80,13 @@ fn part1(input: &str) -> i32 {
     let mut all_visited_iter = input.lines().map(pairs).map(visited_points);
 
     let mut intersections: HashSet<_> =
-        all_visited_iter.next().unwrap().into_iter().map(|(point, _)| point).collect();
+        all_visited_iter.next().unwrap().into_iter().map(|(vec2, _)| vec2).collect();
 
     for visited in all_visited_iter {
-        intersections.retain(|point| visited.contains_key(point));
+        intersections.retain(|vec2| visited.contains_key(vec2));
     }
 
-    intersections.into_iter().map(|Point(x, y)| x.abs() + y.abs()).min().unwrap()
+    intersections.into_iter().map(|Vec2(x, y)| x.abs() + y.abs()).min().unwrap()
 }
 
 #[allow(dead_code)]
@@ -96,15 +96,15 @@ fn part2(input: &str) -> usize {
     let mut all_visited_iter = all_visited.iter();
 
     let mut intersections: HashSet<_> =
-        all_visited_iter.next().unwrap().iter().map(|(point, _)| point).collect();
+        all_visited_iter.next().unwrap().iter().map(|(vec2, _)| vec2).collect();
 
     for visited in all_visited_iter {
-        intersections.retain(|point| visited.contains_key(point));
+        intersections.retain(|vec2| visited.contains_key(vec2));
     }
 
     intersections
         .iter()
-        .map(|point| all_visited.iter().filter_map(|visited| visited.get(point)).sum())
+        .map(|vec2| all_visited.iter().filter_map(|visited| visited.get(vec2)).sum())
         .min()
         .unwrap()
 }

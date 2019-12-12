@@ -1,43 +1,44 @@
-use crate::utils::point::Point;
 use num::{integer::gcd, Integer, Signed, ToPrimitive};
 use std::cmp;
 use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::iter;
 
-fn parse(input: &str) -> impl Iterator<Item = Point<i16>> + '_ {
+use crate::utils::Vec2;
+
+fn parse(input: &str) -> impl Iterator<Item = Vec2<i16>> + '_ {
     input.trim().lines().enumerate().flat_map(|(y, line)| {
         line.chars().enumerate().filter_map(move |(x, c)| match c {
-            '#' => Some(Point(x as i16, y as i16)),
+            '#' => Some(Vec2(x as i16, y as i16)),
             _ => None,
         })
     })
 }
 
-impl<T: ToPrimitive + Copy> Point<T> {
-    fn to_f64(self) -> Option<Point<f64>> {
-        Some(Point(self.0.to_f64()?, self.1.to_f64()?))
+impl<T: ToPrimitive + Copy> Vec2<T> {
+    fn to_f64(self) -> Option<Vec2<f64>> {
+        Some(Vec2(self.0.to_f64()?, self.1.to_f64()?))
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-struct Direction<T>(Point<T>);
+struct Direction<T>(Vec2<T>);
 
 impl<T: Integer + Copy> Direction<T> {
-    pub fn from_point(point: Point<T>) -> Option<Direction<T>> {
-        let Point(x, y) = point;
+    pub fn from_vec2(vec2: Vec2<T>) -> Option<Direction<T>> {
+        let Vec2(x, y) = vec2;
         if x.is_zero() && y.is_zero() {
             None
         } else {
             let divisor = gcd(x, y);
-            Some(Direction(Point(x / divisor, y / divisor)))
+            Some(Direction(Vec2(x / divisor, y / divisor)))
         }
     }
 }
 
 impl<T: ToPrimitive + Copy> Direction<T> {
     fn angle(&self) -> f64 {
-        self.0.to_f64().unwrap().angle(Point(0.0, 1.0))
+        self.0.to_f64().unwrap().angle(Vec2(0.0, 1.0))
     }
 }
 
@@ -54,13 +55,13 @@ impl<T: ToPrimitive + Copy + Eq + PartialOrd> Ord for Direction<T> {
 }
 
 fn find_best_monitoring_station<'a, T: Integer + Signed + Hash + Copy + 'a>(
-    asteroids: impl Iterator<Item = &'a Point<T>> + Clone,
-) -> Option<(Point<T>, usize)> {
+    asteroids: impl Iterator<Item = &'a Vec2<T>> + Clone,
+) -> Option<(Vec2<T>, usize)> {
     asteroids
         .clone()
         .map(|a0| {
             let directions: HashSet<_> =
-                asteroids.clone().filter_map(|a1| Direction::from_point(*a1 - *a0)).collect();
+                asteroids.clone().filter_map(|a1| Direction::from_vec2(*a1 - *a0)).collect();
 
             (*a0, directions.len())
         })
@@ -68,7 +69,7 @@ fn find_best_monitoring_station<'a, T: Integer + Signed + Hash + Copy + 'a>(
 }
 
 #[allow(dead_code)]
-fn part1(input: &str) -> (Point<i16>, usize) {
+fn part1(input: &str) -> (Vec2<i16>, usize) {
     let asteroids: Vec<_> = parse(input).collect();
 
     find_best_monitoring_station(asteroids.iter()).expect("No best asteroid found!")
@@ -84,7 +85,7 @@ fn part2(input: &str) -> Option<i16> {
 
         for asteroid in asteroids {
             let diff = asteroid - best_asteroid;
-            if let Some(direction) = Direction::from_point(diff) {
+            if let Some(direction) = Direction::from_vec2(diff) {
                 seen.entry(direction).or_insert_with(Vec::new).push(diff);
             }
         }
@@ -117,7 +118,7 @@ fn part2(input: &str) -> Option<i16> {
         })
     };
 
-    let Point(x, y) = shoot_asteroids().nth(199)?;
+    let Vec2(x, y) = shoot_asteroids().nth(199)?;
 
     Some(x * 100 + y)
 }
@@ -128,12 +129,12 @@ mod tests {
 
     #[test]
     fn part1_works() {
-        assert_eq!(part1(include_str!("test_input0")), (Point(3, 4), 8));
-        assert_eq!(part1(include_str!("test_input1")), (Point(5, 8), 33));
-        assert_eq!(part1(include_str!("test_input2")), (Point(1, 2), 35));
-        assert_eq!(part1(include_str!("test_input3")), (Point(6, 3), 41));
-        assert_eq!(part1(include_str!("test_input4")), (Point(11, 13), 210));
-        assert_eq!(part1(include_str!("input")), (Point(11, 11), 221));
+        assert_eq!(part1(include_str!("test_input0")), (Vec2(3, 4), 8));
+        assert_eq!(part1(include_str!("test_input1")), (Vec2(5, 8), 33));
+        assert_eq!(part1(include_str!("test_input2")), (Vec2(1, 2), 35));
+        assert_eq!(part1(include_str!("test_input3")), (Vec2(6, 3), 41));
+        assert_eq!(part1(include_str!("test_input4")), (Vec2(11, 13), 210));
+        assert_eq!(part1(include_str!("input")), (Vec2(11, 11), 221));
     }
 
     #[test]
