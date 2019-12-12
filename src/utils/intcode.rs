@@ -99,7 +99,13 @@ impl<T> CPU<T> {
 
 impl<T: FromStr> CPU<T> {
     pub fn from_source(input: &str) -> CPU<T> {
-        CPU::new(input.trim().split(',').map(|s| s.parse().ok().unwrap()).collect())
+        CPU::new(
+            input
+                .trim()
+                .split(',')
+                .map(|s| s.parse().ok().unwrap_or_else(|| panic!("Failed parsing {}", s)))
+                .collect(),
+        )
     }
 }
 
