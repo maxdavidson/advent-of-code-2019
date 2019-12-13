@@ -11,7 +11,7 @@ impl<T: ops::Add<Output = T> + ops::Mul<Output = T> + Copy> Vec2<T> {
 }
 
 impl<T: ops::Add<Output = T> + ops::Mul<Output = T> + Copy> Vec2<T> {
-    pub fn len_sqr(self) -> T {
+    pub fn sqr_len(self) -> T {
         self.0 * self.0 + self.1 * self.1
     }
 }
@@ -40,6 +40,20 @@ impl<T: Zero> Default for Vec2<T> {
     }
 }
 
+impl<T: ops::Mul<Output = T> + Copy> ops::Mul for Vec2<T> {
+    type Output = Vec2<T>;
+
+    fn mul(self, rhs: Vec2<T>) -> Vec2<T> {
+        Vec2(self.0 * rhs.0, self.1 * rhs.1)
+    }
+}
+
+impl<T: ops::Mul<Output = T> + Copy> ops::MulAssign<Vec2<T>> for Vec2<T> {
+    fn mul_assign(&mut self, rhs: Vec2<T>) {
+        *self = *self * rhs;
+    }
+}
+
 impl<T: ops::Mul<Output = T> + Copy> ops::Mul<T> for Vec2<T> {
     type Output = Vec2<T>;
 
@@ -51,6 +65,20 @@ impl<T: ops::Mul<Output = T> + Copy> ops::Mul<T> for Vec2<T> {
 impl<T: ops::Mul<Output = T> + Copy> ops::MulAssign<T> for Vec2<T> {
     fn mul_assign(&mut self, rhs: T) {
         *self = *self * rhs;
+    }
+}
+
+impl<T: ops::Div<Output = T> + Copy> ops::Div for Vec2<T> {
+    type Output = Vec2<T>;
+
+    fn div(self, rhs: Vec2<T>) -> Vec2<T> {
+        Vec2(self.0 / rhs.0, self.1 / rhs.1)
+    }
+}
+
+impl<T: ops::Div<Output = T> + Copy> ops::DivAssign<Vec2<T>> for Vec2<T> {
+    fn div_assign(&mut self, rhs: Vec2<T>) {
+        *self = *self / rhs;
     }
 }
 

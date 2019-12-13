@@ -93,7 +93,7 @@ fn part2(input: &str) -> Option<i16> {
         let offset_groups: Vec<_> = seen
             .into_iter()
             .map(|(_, mut v)| {
-                v.sort_by_cached_key(|v| v.len_sqr());
+                v.sort_by_cached_key(|v| v.sqr_len());
                 VecDeque::from(v)
             })
             .collect();
