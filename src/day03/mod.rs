@@ -1,17 +1,8 @@
-use num::{Num, Signed};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::str::FromStr;
 
-use crate::utils::Vec2;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
+use crate::utils::{Direction, Vec2};
 
 impl TryFrom<char> for Direction {
     type Error = ();
@@ -23,33 +14,6 @@ impl TryFrom<char> for Direction {
             'L' => Ok(Direction::Left),
             'R' => Ok(Direction::Right),
             _ => Err(()),
-        }
-    }
-}
-
-impl<T: Num + Signed + Copy> Vec2<T> {
-    fn up() -> Vec2<T> {
-        Vec2(T::zero(), T::one())
-    }
-
-    fn down() -> Vec2<T> {
-        Vec2(T::zero(), -T::one())
-    }
-
-    fn left() -> Vec2<T> {
-        Vec2(-T::one(), T::zero())
-    }
-
-    fn right() -> Vec2<T> {
-        Vec2(T::one(), T::zero())
-    }
-
-    fn translate(&mut self, direction: Direction) {
-        match direction {
-            Direction::Up => *self += Self::up(),
-            Direction::Down => *self += Self::down(),
-            Direction::Left => *self += Self::left(),
-            Direction::Right => *self += Self::right(),
         }
     }
 }
