@@ -12,8 +12,9 @@ use crate::utils::{
 #[derive(Debug)]
 enum Tile {
     Wall,
-    Empty(Droid),
     Target,
+    EmptyVisited,
+    EmptyUnvisited(Droid),
 }
 
 #[derive(Debug, Clone)]
@@ -34,7 +35,7 @@ impl Droid {
 
         match next_output {
             Some(0) => Tile::Wall,
-            Some(1) => Tile::Empty(self),
+            Some(1) => Tile::EmptyUnvisited(self),
             Some(2) => Tile::Target,
             _ => panic!("Unexpeted CPU output!"),
         }
@@ -50,22 +51,36 @@ fn explore_map(input: &str) -> Tiles {
     tiles.insert(origin, {
         let cpu = CPU::from_source(input);
         let droid = Droid { cpu };
-        (Tile::Empty(droid), 0usize)
+        (Tile::EmptyUnvisited(droid), 0usize)
     });
 
     let mut queue = VecDeque::new();
     queue.push_back(origin);
 
     while let Some(pos) = queue.pop_front() {
+        let (droid, dist) = if let Entry::Occupied(mut o) = tiles.entry(pos) {
+            let dist = if let (Tile::EmptyUnvisited(_), dist) = o.get() {
+                *dist
+            } else {
+                continue;
+            };
+
+            if let (Tile::EmptyUnvisited(droid), dist) = o.insert((Tile::EmptyVisited, dist)) {
+                (droid, dist)
+            } else {
+                continue;
+            }
+        } else {
+            continue;
+        };
+
         for &dir in &DIRECTIONS {
             let next_pos = pos.translated(dir);
-            if !tiles.contains_key(&next_pos) {
-                if let Some((Tile::Empty(droid), dist)) = tiles.get(&pos) {
-                    let next_tile = droid.clone().go(dir);
-                    let next_dist = dist + 1;
-                    tiles.insert(next_pos, (next_tile, next_dist));
-                    queue.push_back(next_pos);
-                }
+            if let Entry::Vacant(v) = tiles.entry(next_pos) {
+                let next_tile = droid.clone().go(dir);
+                let next_dist = dist + 1;
+                v.insert((next_tile, next_dist));
+                queue.push_back(next_pos);
             }
         }
     }
