@@ -10,6 +10,39 @@ pub enum Direction {
     Right,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rotation {
+    CW,
+    CCW,
+}
+
+impl Direction {
+    pub fn cw(self) -> Direction {
+        match self {
+            Direction::Up => Direction::Right,
+            Direction::Right => Direction::Down,
+            Direction::Down => Direction::Left,
+            Direction::Left => Direction::Up,
+        }
+    }
+
+    pub fn ccw(self) -> Direction {
+        match self {
+            Direction::Up => Direction::Left,
+            Direction::Left => Direction::Down,
+            Direction::Down => Direction::Right,
+            Direction::Right => Direction::Up,
+        }
+    }
+
+    pub fn rotated(self, rotation: Rotation) -> Direction {
+        match rotation {
+            Rotation::CW => self.cw(),
+            Rotation::CCW => self.ccw(),
+        }
+    }
+}
+
 pub const DIRECTIONS: [Direction; 4] =
     [Direction::Up, Direction::Down, Direction::Left, Direction::Right];
 

@@ -2,40 +2,12 @@ use itertools::Itertools;
 use std::cmp::{max, min};
 use std::collections::HashMap;
 
-use crate::utils::{intcode::CPU, Vec2};
+use crate::utils::{intcode::CPU, Direction, Vec2};
 
 #[derive(Debug, Clone, Copy)]
 enum Color {
     Black,
     White,
-}
-
-#[derive(Debug, Copy, Clone)]
-enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-impl Direction {
-    pub fn cw(self) -> Direction {
-        match self {
-            Direction::Up => Direction::Right,
-            Direction::Right => Direction::Down,
-            Direction::Down => Direction::Left,
-            Direction::Left => Direction::Up,
-        }
-    }
-
-    pub fn ccw(self) -> Direction {
-        match self {
-            Direction::Up => Direction::Left,
-            Direction::Left => Direction::Down,
-            Direction::Down => Direction::Right,
-            Direction::Right => Direction::Up,
-        }
-    }
 }
 
 impl<T: num::Zero + num::One + num::Signed> From<Direction> for Vec2<T> {
