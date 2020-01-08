@@ -4,13 +4,13 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Production<'a> {
     name: &'a str,
     amount: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Reaction<'a> {
     output: Production<'a>,
     inputs: Vec<Production<'a>>,
@@ -42,7 +42,7 @@ impl Reaction<'_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Reactions<'a> {
     reactions: HashMap<&'a str, Reaction<'a>>,
     storage: RefCell<HashMap<&'a str, i64>>,
@@ -60,21 +60,22 @@ impl<'a> Reactions<'a> {
             .map(Reaction::from_line)
             .map(|reaction| (reaction.output.name, reaction))
             .collect();
+
         let storage = HashMap::new().into();
         Reactions { reactions, storage }
     }
 
-    fn get_amount<'b: 'a>(&'a self, name: &'b str) -> i64 {
+    fn get_amount(&self, name: &str) -> i64 {
         *self.storage.borrow().get(name).unwrap_or(&0)
     }
 
-    fn update_amount<'b: 'a>(&'a self, name: &'b str, update: impl FnOnce(i64) -> i64) {
+    fn update_amount<'b: 'a>(&self, name: &'b str, update: impl FnOnce(i64) -> i64) {
         let mut storage = self.storage.borrow_mut();
         let amount = storage.entry(name).or_insert(0);
         *amount = update(*amount);
     }
 
-    fn produce<'b: 'a>(&'a self, name: &'b str, requested_amount: i64) {
+    fn produce<'b: 'a>(&self, name: &'b str, requested_amount: i64) {
         if let Some(reaction) = self.reactions.get(name) {
             let current_amount = self.get_amount(name);
 
@@ -93,12 +94,12 @@ impl<'a> Reactions<'a> {
         }
     }
 
-    fn consume<'b: 'a>(&'a self, name: &'b str, amount: i64) {
+    fn consume<'b: 'a>(&self, name: &'b str, amount: i64) {
         self.produce(name, amount);
         self.update_amount(name, |prev_amount| prev_amount - amount);
     }
 
-    fn required_ore_for_fuel(&'a mut self, amount: i64) -> i64 {
+    fn required_ore_for_fuel(&mut self, amount: i64) -> i64 {
         self.consume("FUEL", amount);
         -self.get_amount("ORE")
     }
@@ -113,6 +114,7 @@ fn part1(input: &str) -> i64 {
 #[allow(dead_code)]
 fn part2(input: &str) -> i64 {
     let target_ore_amount = 1_000_000_000_000i64;
+    let reactions = Reactions::from_input(input);
 
     let mut start = 0;
     let mut end = target_ore_amount;
@@ -123,7 +125,7 @@ fn part2(input: &str) -> i64 {
         }
 
         let fuel_amount = (end + start) / 2;
-        let required_ore = Reactions::from_input(input).required_ore_for_fuel(fuel_amount);
+        let required_ore = reactions.clone().required_ore_for_fuel(fuel_amount);
 
         match required_ore.cmp(&target_ore_amount) {
             Ordering::Greater => {
